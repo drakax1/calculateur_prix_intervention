@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur de Prix Intervention</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.4;
+        }
+        h2 {
+            margin-bottom: 16px;
+        }
+        .admin-section {
+            margin-bottom: 16px;
+        }
+        table {
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            width: auto;
+        }
+        colgroup col:first-child { width: 240px; }
+        colgroup col:nth-child(2) { width: 160px; }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+        }
+        td:nth-child(2) input,
+        td:nth-child(3) input {
+            text-align: center;
+        }
+        td:nth-child(2),
+        td:nth-child(3) {
+            text-align: center;
+        }
+        td:nth-child(4) {
+            text-align: right;
+        }
+        hr {
+            border: none;
+            border-top: 3px double #000;
+            margin: 24px 0;
+        }
+        .checkbox-section {
+            margin-bottom: 16px;
+        }
+        #totalSansMarge, #prixFinal {
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+<h2>Calculateur de Prix Intervention</h2>
+
+<div class="admin-section">
+    <label>Code Admin :
+        <input type="password" id="adminCode">
+        <span id="adminStatus" style="margin-left: 10px; font-weight: bold;"></span>
+        <button id="fermerAdmin" style="display:none;" onclick="fermerAdmin()">Se déconnecter</button>
+    </label>
+</div>
+
+<table>
+    <colgroup>
+        <col>
+        <col>
+    </colgroup>
+    <thead>
+        <tr>
+            <th>À reporter</th>
+            <th>Quantité</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Distance aller simple (KM)</td>
+            <td><input type="number" id="kmSimple" value="45" min="0" step="1"></td>
+        </tr>
+        <tr>
+            <td>Temps déplacement aller</td>
+            <td><input type="number" id="minutesDeplacement" value="75" min="0" step="1"></td>
+        </tr>
+    </tbody>
+</table>
+
+<hr>
+
+<table id="calculTable">
+    <colgroup>
+        <col>
+        <col>
+        <col>
+        <col>
+    </colgroup>
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th>Quantité</th>
+            <th>Prix</th>
+            <th>Total CHF</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Temps intervention</td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" value="1"></td>
+            <td><input type="text" class="prixFixe" value="80" readonly></td>
+            <td class="ligneTotal">CHF 0</td>
+        </tr>
+        <tr>
+            <td>Distance totale (aller-retour)</td>
+            <td><input type="number" id="kmAllerRetour" readonly></td>
+            <td><input type="text" class="prixFixe" value="1.2" readonly></td>
+            <td class="ligneTotal">CHF 0</td>
+        </tr>
+        <tr>
+            <td>Temps déplacement total (aller-retour)</td>
+            <td><input type="number" id="deplacementQuantite" readonly></td>
+            <td><input type="text" class="prixFixe" value="80" readonly></td>
+            <td class="ligneTotal">CHF 0</td>
+        </tr>
+        <tr>
+            <td>Produits / Matériel</td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" class="quantiteFixe produitQuantite" value=""></td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" class="prixFixe produitPrix" value=""></td>
+            <td class="ligneTotal">CHF 0</td>
+        </tr>
+        <tr>
+            <td>Repas</td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" class="quantiteFixe repasQuantite" value=""></td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" class="prixFixe repasPrix" value=""></td>
+            <td class="ligneTotal">CHF 0</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="checkbox-section">
+    <label><input type="checkbox" id="punaises"> Intervention pour punaises (+40% si &gt;400.-)</label>
+</div>
+
+<div id="totalSansMarge">Total sans marge: CHF 0</div>
+<div id="prixFinal"><strong>Prix final: CHF 0</strong></div>
+
+<script>
+    const prixFixes = [80, 1.2, 80, 1, 1];
+
+    function formatNumber(num) {
+        return Number.isInteger(num) ? num.toString() : num.toFixed(2).replace(/\.00$/, '').replace(',', '.');
+    }
+
+    const totalSansMarge = document.getElementById('totalSansMarge');
+    const prixFinal = document.getElementById('prixFinal');
+    const punaisesCheckbox = document.getElementById('punaises');
+    const kmSimpleInput = document.getElementById('kmSimple');
+    const minutesDeplacementInput = document.getElementById('minutesDeplacement');
+    const kmAllerRetourInput = document.getElementById('kmAllerRetour');
+    const deplacementQuantiteInput = document.getElementById('deplacementQuantite');
+    const fermerAdminBtn = document.getElementById('fermerAdmin');
+    const adminCodeInput = document.getElementById('adminCode');
+    const adminStatus = document.getElementById('adminStatus');
+
+    function parseInputValue(input) {
+        return parseFloat((input.value || '').replace(',', '.')) || 0;
+    }
+
+    function calculerTotal() {
+        let total = 0;
+        document.querySelectorAll('#calculTable tbody tr').forEach((row, i) => {
+            const q = parseInputValue(row.querySelector('td:nth-child(2) input'));
+            const pInput = row.querySelector('td:nth-child(3) input');
+            const p = parseInputValue(pInput);
+            const lt = q * p;
+            row.querySelector('.ligneTotal').textContent = 'CHF ' + formatNumber(lt);
+            total += lt;
+        });
+        totalSansMarge.textContent = 'Total sans marge: CHF ' + formatNumber(total);
+        const final = total <= 400 ? total + 100 : total * (punaisesCheckbox.checked ? 1.4 : 1.3);
+        prixFinal.textContent = 'Prix final: CHF ' + formatNumber(final);
+    }
+
+    function updateAllerRetour() {
+        const v = parseFloat(kmSimpleInput.value) * 2;
+        kmAllerRetourInput.value = formatNumber(v);
+        calculerTotal();
+    }
+
+    function updateDeplacementTotal() {
+        const minutes = parseFloat(minutesDeplacementInput.value);
+        const hours = (minutes * 2) / 60;
+        deplacementQuantiteInput.value = formatNumber(hours);
+        calculerTotal();
+    }
+
+    function activerAdmin() {
+        if (adminCodeInput.value === 'admin123') {
+            fermerAdminBtn.style.display = 'inline';
+            adminStatus.textContent = 'Statut : Connecté';
+            adminStatus.style.color = 'green';
+            document.querySelectorAll('.prixFixe').forEach(input => {
+                if (!input.classList.contains('produitPrix') && !input.classList.contains('repasPrix')) {
+                    input.removeAttribute('readonly');
+                }
+            });
+        } else {
+            alert('Code incorrect');
+        }
+        adminCodeInput.value = '';
+    }
+
+    function fermerAdmin() {
+        fermerAdminBtn.style.display = 'none';
+        adminStatus.textContent = '';
+        document.querySelectorAll('.prixFixe').forEach(input => {
+            if (!input.classList.contains('produitPrix') && !input.classList.contains('repasPrix')) {
+                input.setAttribute('readonly', true);
+            }
+        });
+    }
+
+    adminCodeInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            activerAdmin();
+        }
+    });
+
+    document.querySelectorAll("input[type='number'], input[type='text']").forEach(i => i.addEventListener('input', calculerTotal));
+    kmSimpleInput.addEventListener('input', updateAllerRetour);
+    minutesDeplacementInput.addEventListener('input', updateDeplacementTotal);
+    punaisesCheckbox.addEventListener('change', calculerTotal);
+
+    window.onload = () => {
+        document.querySelectorAll('.prixFixe').forEach(input => {
+            if (!input.classList.contains('produitPrix') && !input.classList.contains('repasPrix')) {
+                input.setAttribute('readonly', true);
+            }
+        });
+        calculerTotal();
+    };
+</script>
+</body>
+</html>
