@@ -49,6 +49,10 @@
         #totalSansMarge, #prixFinal {
             margin-top: 16px;
         }
+        .infos-supplementaires {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -75,12 +79,12 @@
     </thead>
     <tbody>
         <tr>
-            <td>Distance aller simple (KM)</td>
-            <td><input type="number" id="kmSimple" value="45" min="0" step="1"></td>
+            <td>Temps déplacement aller (minutes)</td>
+            <td><input type="number" id="minutesDeplacement" value="75" min="0" step="1"></td>
         </tr>
         <tr>
-            <td>Temps déplacement aller</td>
-            <td><input type="number" id="minutesDeplacement" value="75" min="0" step="1"></td>
+            <td>Distance aller simple (KM)</td>
+            <td><input type="number" id="kmSimple" value="45" min="0" step="1"></td>
         </tr>
     </tbody>
 </table>
@@ -104,8 +108,8 @@
     </thead>
     <tbody>
         <tr>
-            <td>Temps intervention</td>
-            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" value="1"></td>
+            <td>Temps déplacement total (aller-retour)</td>
+            <td><input type="number" id="deplacementQuantite" readonly></td>
             <td><input type="text" class="prixFixe" value="80" readonly></td>
             <td class="ligneTotal">CHF 0</td>
         </tr>
@@ -116,8 +120,8 @@
             <td class="ligneTotal">CHF 0</td>
         </tr>
         <tr>
-            <td>Temps déplacement total (aller-retour)</td>
-            <td><input type="number" id="deplacementQuantite" readonly></td>
+            <td>Temps intervention</td>
+            <td><input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]+" value="1"></td>
             <td><input type="text" class="prixFixe" value="80" readonly></td>
             <td class="ligneTotal">CHF 0</td>
         </tr>
@@ -141,6 +145,12 @@
 </div>
 
 <div id="totalSansMarge">Total sans marge: CHF 0</div>
+
+<div class="infos-supplementaires">
+    <div>Si total sans marge &lt; CHF 400.-, ajouter CHF 100.-.</div>
+    <div>Si total sans marge &gt; CHF 400.-, ajouter 30%.</div>
+</div>
+
 <div id="prixFinal"><strong>Prix final: CHF 0</strong></div>
 
 <script>
